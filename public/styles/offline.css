@@ -1,0 +1,146 @@
+:root {
+  --primary: #000000;
+  --background: #ffffff;
+  --text: #333333;
+  --muted: #666666;
+  --border: #e0e0e0;
+  --accent: #0070f3;
+}
+
+.dark {
+  --primary: #ffffff;
+  --background: #121212;
+  --text: #f0f0f0;
+  --muted: #a0a0a0;
+  --border: #333333;
+  --accent: #3291ff;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans",
+    "Helvetica Neue", sans-serif;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 0;
+  margin: 0;
+}
+
+.offline-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 100vh;
+}
+
+.offline-logo {
+  margin-bottom: 2rem;
+  color: var(--primary);
+}
+
+h1 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: var(--primary);
+}
+
+p {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.offline-actions {
+  margin: 2rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.retry-button {
+  background-color: var(--accent);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-bottom: 1rem;
+}
+
+.retry-button:hover {
+  background-color: #0060df;
+}
+
+.offline-tip {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.offline-features {
+  border-top: 1px solid var(--border);
+  padding-top: 1.5rem;
+  width: 100%;
+}
+
+.offline-features h2 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: var(--primary);
+}
+
+.offline-features ul {
+  list-style-type: none;
+  text-align: left;
+}
+
+.offline-features li {
+  padding: 0.5rem 0;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+}
+
+.offline-features li::before {
+  content: "✓";
+  color: var(--accent);
+  margin-right: 0.5rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: var(--background);
+    color: var(--text);
+  }
+}
+
+@media (max-width: 600px) {
+  .offline-container {
+    padding: 1.5rem;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  .offline-features ul {
+    padding-left: 1rem;
+  }
+}
+
