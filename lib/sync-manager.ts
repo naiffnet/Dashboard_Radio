@@ -14,6 +14,11 @@ let isOnline = typeof navigator !== "undefined" ? navigator.onLine : true
 // Status de sincronização
 let isSyncing = false
 
+// Função para obter o status de conexão atual
+export function getOnlineStatus() {
+  return isOnline
+}
+
 // Interface para eventos de sincronização
 type SyncEvent = "syncStart" | "syncComplete" | "syncError" | "onlineStatusChange"
 type SyncEventCallback = (status: boolean) => void
@@ -85,13 +90,13 @@ export async function attemptSync(): Promise<boolean> {
     // Por exemplo, enviando os dados para uma API
 
     // Simulação de sincronização bem-sucedida
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    await new Promise<void>((resolve) => setTimeout(resolve, 2000))
 
-    // Atualizar status de sincronização para os itens processados
-    // Isso seria feito após a confirmação do servidor
-    for (const item of syncQueue) {
+    // Atuastus de sincronização para os itens processados
+    // Isso seria feto aós a confirmação do servidor
+    for (const item of syncQueue as Array<{operation: string, entity: string, data: {id: string}, id: string}>) {
       if (item.operation === "delete") {
-        await remove(STORES.SYNC_QUEUE, item.id)
+        await remove(item.entity, item.data.id)
       } else {
         // Atualizar o status do item original para 'synced'
         const entity = item.data
@@ -123,17 +128,7 @@ export async function attemptSync(): Promise<boolean> {
   }
 }
 
-// Força uma sincronização manualmente
-export function forceSync(): Promise<boolean> {
-  return attemptSync()
-}
-
-// Verifica se o dispositivo está online
-export function getOnlineStatus(): boolean {
-  return isOnline
-}
-
-// Verifica se está sincronizando
+// Forçasincronizando
 export function getSyncingStatus(): boolean {
   return isSyncing
 }

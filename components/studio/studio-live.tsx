@@ -81,7 +81,23 @@ export function StudioLive() {
   const [fullscreenMode, setFullscreenMode] = useState(false)
   const [showMixer, setShowMixer] = useState(true)
   const [activeTab, setActiveTab] = useState("events")
-  const [currentDateTime, setCurrentDateTime] = useState(new Date())
+  const [currentDateTime, setCurrentDateTime] = useState<string>(() => new Date().toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }))
+
+  const formatTime = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return [
+      hours > 0 ? hours.toString().padStart(2, '0') : null,
+      minutes.toString().padStart(2, '0'),
+      secs.toString().padStart(2, '0')
+    ].filter(Boolean).join(':');
+  };
   const [currentTrackProgress, setCurrentTrackProgress] = useState(0)
   const [nextTrackProgress, setNextTrackProgress] = useState(0)
   const [activeAuxPlayer, setActiveAuxPlayer] = useState<number | null>(null)
@@ -135,7 +151,7 @@ export function StudioLive() {
   ])
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const animationRef = useRef<number>()
+const animationRef = useRef<number>(0)
 
   // Simulação de visualizador de áudio
   useEffect(() => {
@@ -188,9 +204,17 @@ export function StudioLive() {
 
   // Atualizar data e hora
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentDateTime(new Date())
-    }, 1000)
+    const updateTime = () => {
+      setCurrentDateTime(new Date().toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }));
+    };
+    
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
 
     return () => clearInterval(interval)
   }, [])
@@ -294,12 +318,21 @@ export function StudioLive() {
     }
   }
 
-  const formatTime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600)
-    const m = Math.floor((seconds % 3600) / 60)
-    const s = seconds % 60
-    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
-  }
+  // Atualizar data e hora
+  useEffect(() => {
+    const updateTime = () => {
+      setCurrentDateTime(new Date().toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }));
+    };
+    
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleVolumeChange = (type: string, value: number[]) => {
     setVolume((prev) => ({ ...prev, [type]: value[0] }))
@@ -606,14 +639,14 @@ export function StudioLive() {
 
         <div className="flex items-center space-x-4">
           <div className="flex flex-col items-end">
-            <div className="text-xs">{currentDateTime.toLocaleDateString("pt-BR", { weekday: "long" })}</div>
+            <div className="text-xs">{new Date().toLocaleDateString("pt-BR", { weekday: "long" })}</div>
             <div className="text-xs">
-              {currentDateTime.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+              {new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
             </div>
           </div>
           <div className="flex items-center space-x-2">
             <Clock className="h-4 w-4" />
-            <span className="text-xl font-bold">{currentDateTime.toLocaleTimeString("pt-BR")}</span>
+            <span className="text-xl font-bold">{currentDateTime}</span>
           </div>
           <div className="flex items-center space-x-2">
             <Thermometer className="h-4 w-4" />
@@ -913,6 +946,7 @@ export function StudioLive() {
               >
                 {isLive ? "NO AR" : "OFFLINE"}
               </Badge>
+
               {isLive && <div className="text-xs text-neutral-400">Tempo no ar: {formatTime(elapsedTime)}</div>}
             </div>
 
@@ -952,6 +986,8 @@ export function StudioLive() {
                     >
                       {currentTrack.elapsed} / {currentTrack.duration}
                     </Badge>
+
+
                   </div>
                   <div className="text-lg font-bold">{currentTrack.title}</div>
                   <div className="text-sm text-neutral-300">{currentTrack.artist}</div>
@@ -1154,7 +1190,7 @@ export function StudioLive() {
                   <div
                     className={`h-full ${theme === "colorful" ? "bg-primary" : "bg-primary"}`}
                     style={{ width: `${auxPlayers[activeAuxPlayer - 1].progress}%` }}
-                  ></div>
+                  />
                 </div>
                 <div className="flex justify-center space-x-2 mb-2">
                   <Button
