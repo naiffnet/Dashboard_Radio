@@ -14,6 +14,8 @@ import { Slider } from "@/components/ui/slider"
 import { useTheme } from "next-themes"
 import { useToast } from "@/hooks/use-toast"
 import { ThemeSwitcher } from "@/components/theme-switcher"
+import { storeAudio } from "@/lib/media-storage"
+import { getOnlineStatus } from "@/lib/sync-manager"
 import {
   Mic,
   MicOff,
@@ -81,6 +83,7 @@ export function StudioLive() {
   const [fullscreenMode, setFullscreenMode] = useState(false)
   const [showMixer, setShowMixer] = useState(true)
   const [activeTab, setActiveTab] = useState("events")
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [currentDateTime, setCurrentDateTime] = useState<string>(() => new Date().toLocaleTimeString('pt-BR', {
     hour: '2-digit',
     minute: '2-digit',
@@ -106,33 +109,60 @@ export function StudioLive() {
 
   // Estado para cartucheira
   const [cartridgeCards, setCartridgeCards] = useState([
-    { id: 1, name: "Vinheta Abertura", file: "vinheta_abertura.mp3", active: false },
-    { id: 2, name: "Efeito Aplausos", file: "aplausos.mp3", active: false },
-    { id: 3, name: "Transição", file: "transicao.mp3", active: false },
-    { id: 4, name: "", file: "", active: false, empty: true },
-    { id: 5, name: "", file: "", active: false, empty: true },
-    { id: 6, name: "", file: "", active: false, empty: true },
-    { id: 7, name: "", file: "", active: false, empty: true },
-    { id: 8, name: "", file: "", active: false, empty: true },
+    { id: 1, name: "Vinheta Abertura", file: "vinheta_abertura.mp3", active: false, cached: false },
+    { id: 2, name: "Efeito Aplausos", file: "aplausos.mp3", active: false, cached: false },
+    { id: 3, name: "Transição", file: "transicao.mp3", active: false, cached: false },
+    { id: 4, name: "", file: "", active: false, empty: true, cached: false },
+    { id: 5, name: "", file: "", active: false, empty: true, cached: false },
+    { id: 6, name: "", file: "", active: false, empty: true, cached: false },
+    { id: 7, name: "", file: "", active: false, empty: true, cached: false },
+    { id: 8, name: "", file: "", active: false, empty: true, cached: false },
   ])
 
-  // Estado para explorador de arquivos
-  const [folderStructure, setFolderStructure] = useState({
-    currentPath: "/Músicas",
-    folders: [
-      { name: "Músicas", path: "/Músicas" },
-      { name: "Efeitos", path: "/Efeitos" },
-      { name: "Vinhetas", path: "/Vinhetas" },
-      { name: "Programas", path: "/Programas" },
-    ],
-    files: [
-      { name: "Summer Vibes.mp3", type: "audio", size: "8.5 MB", path: "/Músicas/Summer Vibes.mp3" },
-      { name: "Night Groove.mp3", type: "audio", size: "9.7 MB", path: "/Músicas/Night Groove.mp3" },
-      { name: "Chill Wave.mp3", type: "audio", size: "7.9 MB", path: "/Músicas/Chill Wave.mp3" },
-      { name: "Dance Floor.mp3", type: "audio", size: "10.2 MB", path: "/Músicas/Dance Floor.mp3" },
-      { name: "Sunset Dreams.mp3", type: "audio", size: "8.1 MB", path: "/Músicas/Sunset Dreams.mp3" },
-    ],
-  })
+  // Função para armazenar áudio no cache
+  const cacheAudio = async (file: string, name: string) => {
+    if (!file || !name) return false;
+    try {
+      const stored = await storeAudio(file, { title: name });
+      return stored;
+    } catch (error) {
+      console.error("Erro ao armazenar áudio:", error);
+      return false;
+    }
+  };
+
+  // Função para adicionar novo cartão
+  const addCartridgeCard = async (file: File, slot: number) => {
+    const url = URL.createObjectURL(file);
+    const cached = await cacheAudio(url, file.name);
+    
+    setCartridgeCards(cards => cards.map(card =>
+      card.id === slot
+        ? { ...card, name: file.name, file: url, empty: false, cached }
+        : card
+    ));
+  };
+
+  // Componentes do player de mídia
+  return (
+    <div className="flex flex-col h-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+        <div className="bg-card rounded-lg shadow-md">
+          <FileExplorer onFileSelect={(files) => {
+            setSelectedFiles(files);
+            toast({
+              title: "Arquivos carregados",
+              description: `${files.length} arquivo(s) selecionado(s) com sucesso`
+            });
+          }} />
+        </div>
+        <div className="bg-card rounded-lg shadow-md">
+          <MusicPlayer initialTracks={selectedFiles.map(file => ({
+            name: file.name,
+            path: URL.createObjectURL(file)
+          }))} />
+        </div>
+      </div>
 
   const [volume, setVolume] = useState({
     master: 80,
@@ -414,53 +444,31 @@ const animationRef = useRef<number>(0)
     }))
   }
 
-  // Dados simulados
+  // Estrutura base para as faixas
   const currentTrack = {
-    title: "Summer Vibes",
-    artist: "DJ Sunshine",
-    duration: "3:42",
-    elapsed: "1:42",
-    album: "Summer Hits 2023",
-    genre: "Electronic",
-    year: "2023",
+    title: "",
+    artist: "",
+    duration: "",
+    elapsed: "",
+    album: "",
+    genre: "",
+    year: "",
   }
 
   const nextTrack = {
-    title: "Night Groove",
-    artist: "Midnight Express",
-    duration: "4:15",
-    album: "Night Sessions",
-    genre: "Deep House",
-    year: "2023",
+    title: "",
+    artist: "",
+    duration: "",
+    album: "",
+    genre: "",
+    year: "",
   }
 
-  const upcomingEvents = [
-    { time: "11:00", title: "Notícias", duration: "5 min" },
-    { time: "11:30", title: "Comercial - Supermercado Economia", duration: "30 seg" },
-    { time: "12:00", title: "Boletim do Meio-dia", duration: "10 min" },
-    { time: "12:15", title: "Comercial - Loja Fashion", duration: "20 seg" },
-  ]
+  const upcomingEvents: { time: string; title: string; duration: string; }[] = []
 
-  const playlistTracks = [
-    { id: "1", title: "Summer Vibes", artist: "DJ Sunshine", duration: "3:42", status: "playing" },
-    { id: "2", title: "Night Groove", artist: "Midnight Express", duration: "4:15", status: "next" },
-    { id: 3, title: "Chill Wave", artist: "Ocean Sounds", duration: "3:28", status: "queued" },
-    { id: "4", title: "Dance Floor", artist: "Club Kings", duration: "5:12", status: "queued" },
-    { id: "5", title: "Sunset Dreams", artist: "Horizon", duration: "4:05", status: "queued" },
-    { id: "6", title: "Urban Beats", artist: "City Pulse", duration: "3:55", status: "queued" },
-    { id: "7", title: "Smooth Jazz", artist: "Night Owls", duration: "6:22", status: "queued" },
-    { id: "8", title: "Electro Pop", artist: "Synth Masters", duration: "3:18", status: "queued" },
-    { id: "9", title: "Latin Rhythm", artist: "Salsa Kings", duration: "4:45", status: "queued" },
-    { id: "10", title: "Rock Classics", artist: "Guitar Heroes", duration: "5:30", status: "queued" },
-  ]
+  const playlistTracks: { id: string; title: string; artist: string; duration: string; status: string; }[] = []
 
-  const historyTracks = [
-    { time: "10:32", title: "Rhythm of Life", artist: "Groove Masters", duration: "4:12" },
-    { time: "10:28", title: "City Lights", artist: "Urban Sounds", duration: "3:45" },
-    { time: "10:24", title: "Morning Energy", artist: "Wake Up Band", duration: "3:22" },
-    { time: "10:20", title: "Coffee Break", artist: "Chill Vibes", duration: "2:55" },
-    { time: "10:15", title: "News Update", artist: "Station News", duration: "5:00" },
-  ]
+  const historyTracks: { time: string; title: string; artist: string; duration: string; }[] = []
 
   return (
     <div className={`flex flex-col h-screen ${fullscreenMode ? "fixed inset-0 z-50 bg-background" : ""}`}>

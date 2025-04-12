@@ -4,21 +4,29 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
-import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX } from "lucide-react";
+import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Download, Check } from "lucide-react";
+import { storeAudio } from "@/lib/media-storage";
+import { getOnlineStatus } from "@/lib/sync-manager";
 
 interface Track {
   name: string;
   path: string;
+  cached?: boolean;
 }
 
-export function MusicPlayer() {
-  const [tracks, setTracks] = useState<Track[]>([]);
+interface MusicPlayerProps {
+  initialTracks?: Track[];
+}
+
+export function MusicPlayer({ initialTracks = [] }: MusicPlayerProps) {
+  const [tracks, setTracks] = useState<Track[]>(initialTracks);
   const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(-1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState(0.7);
   const [isMuted, setIsMuted] = useState(false);
+  const [error, setError] = useState<string>("");
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -36,23 +44,45 @@ export function MusicPlayer() {
     }
   }, [isPlaying, currentTrackIndex]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newTracks: Track[] = [];
+      setError(""); // Limpa erros anteriores
       
-      Array.from(e.target.files).forEach(file => {
-        const url = URL.createObjectURL(file);
-        newTracks.push({
-          name: file.name,
-          path: url
-        });
-      });
+      for (const file of Array.from(e.target.files)) {
+        try {
+          const url = URL.createObjectURL(file);
+          const track: Track = {
+            name: file.name,
+            path: url,
+            cached: false
+          };
+          
+          // Tenta armazenar o áudio para uso offline
+          const stored = await storeAudio(url, { 
+            title: file.name,
+            artist: "Biblioteca Local"
+          });
+          
+          if (stored) {
+            track.cached = true;
+            console.log(`Música ${file.name} armazenada com sucesso`);
+          }
+          
+          newTracks.push(track);
+        } catch (error) {
+          console.error(`Erro ao processar arquivo ${file.name}:`, error);
+          setError(`Erro ao adicionar ${file.name}. Por favor, tente novamente.`);
+        }
+      }
       
-      setTracks(prev => [...prev, ...newTracks]);
-      
-      // Se não houver faixa atual, defina a primeira faixa adicionada como atual
-      if (currentTrackIndex === -1 && newTracks.length > 0) {
-        setCurrentTrackIndex(tracks.length);
+      if (newTracks.length > 0) {
+        setTracks(prev => [...prev, ...newTracks]);
+        
+        // Se não houver faixa atual, defina a primeira faixa adicionada como atual
+        if (currentTrackIndex === -1) {
+          setCurrentTrackIndex(tracks.length);
+        }
       }
     }
   };
@@ -143,9 +173,9 @@ export function MusicPlayer() {
 
   return (
     <div className="p-4 bg-card rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-4">Estúdio de Música</h2>
+      <h2 className="text-2xl font-bold mb-4">Reprodutor de Música</h2>
       
-      <div className="mb-6">
+      <div className="mb-6 space-y-2">
         <input 
           type="file" 
           ref={fileInputRef}
@@ -154,9 +184,10 @@ export function MusicPlayer() {
           multiple 
           className="hidden" 
         />
-        <Button onClick={handleLoadFiles} className="w-full">
-          Carregar Músicas
+        <Button onClick={handleLoadFiles} className="w-full bg-primary hover:bg-primary/90">
+          Selecionar Músicas do Computador
         </Button>
+        {error && <p className="text-red-500 text-sm">{error}</p>}
       </div>
       
       {tracks.length > 0 && (
@@ -165,13 +196,18 @@ export function MusicPlayer() {
             {tracks.map((track, index) => (
               <div 
                 key={index} 
-                className={`p-2 cursor-pointer hover:bg-accent rounded ${index === currentTrackIndex ? 'bg-accent text-accent-foreground' : ''}`}
+                className={`p-2 cursor-pointer hover:bg-accent rounded ${index === currentTrackIndex ? 'bg-accent text-accent-foreground' : ''} flex justify-between items-center`}
                 onClick={() => {
                   setCurrentTrackIndex(index);
                   setIsPlaying(true);
                 }}
               >
-                {track.name}
+                <span>{track.name}</span>
+                {track.cached ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Download className="h-4 w-4 text-muted-foreground" />
+                )}
               </div>
             ))}
           </div>

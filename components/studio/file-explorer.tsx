@@ -4,6 +4,8 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Folder, File, Music, Video, Image, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { storeAudio } from "@/lib/media-storage";
+import { useToast } from "@/components/ui/use-toast";
 
 interface FileItem {
   name: string;
@@ -14,9 +16,14 @@ interface FileItem {
   extension?: string;
 }
 
-export function FileExplorer({ onFileSelect }: { onFileSelect?: (file: File) => void }) {
+interface FileExplorerProps {
+  onFileSelect?: (files: File[]) => void;
+}
+
+export function FileExplorer({ onFileSelect }: FileExplorerProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const handleFileSelect = () => {
     if (fileInputRef.current) {
@@ -24,32 +31,48 @@ export function FileExplorer({ onFileSelect }: { onFileSelect?: (file: File) => 
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const files = Array.from(e.target.files);
       setSelectedFiles(files);
       
-      // Se houver uma função de callback para seleção de arquivo, chame-a com o primeiro arquivo
-      if (onFileSelect && files.length > 0) {
-        onFileSelect(files[0]);
+      // Notifica o componente pai sobre os arquivos selecionados
+      if (onFileSelect) {
+        onFileSelect(files);
+      }
+      
+      // Tenta armazenar cada arquivo de áudio
+      for (const file of files) {
+        try {
+          const url = URL.createObjectURL(file);
+          const stored = await storeAudio(url, {
+            title: file.name,
+            artist: "Biblioteca Local"
+          });
+          
+          if (stored) {
+            toast({
+              title: "Sucesso",
+              description: `Música ${file.name} adicionada com sucesso`
+            });
+          } else {
+            throw new Error("Falha ao armazenar o arquivo");
+          }
+        } catch (error) {
+          console.error(`Erro ao processar arquivo ${file.name}:`, error);
+          toast({
+            variant: "destructive",
+            title: "Erro",
+            description: `Falha ao adicionar ${file.name}. Por favor, tente novamente.`
+          });
+        }
       }
     }
   };
 
   const getFileIcon = (fileName: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase();
-    
-    if (extension === 'mp3' || extension === 'wav' || extension === 'ogg' || extension === 'flac') {
-      return <Music className="h-4 w-4 mr-2" />;
-    } else if (extension === 'mp4' || extension === 'avi' || extension === 'mov' || extension === 'wmv') {
-      return <Video className="h-4 w-4 mr-2" />;
-    } else if (extension === 'jpg' || extension === 'jpeg' || extension === 'png' || extension === 'gif') {
-      return <Image className="h-4 w-4 mr-2" />;
-    } else if (extension === 'txt' || extension === 'doc' || extension === 'docx' || extension === 'pdf') {
-      return <FileText className="h-4 w-4 mr-2" />;
-    } else {
-      return <File className="h-4 w-4 mr-2" />;
-    }
+    return <Music className="h-4 w-4 mr-2" />;
   };
 
   return (
@@ -66,7 +89,7 @@ export function FileExplorer({ onFileSelect }: { onFileSelect?: (file: File) => 
           onChange={handleFileChange}
           className="hidden"
           multiple
-          accept="audio/*,video/*,image/*"
+          accept="audio/*"
         />
       </div>
       
@@ -77,7 +100,7 @@ export function FileExplorer({ onFileSelect }: { onFileSelect?: (file: File) => 
             <div 
               key={index}
               className="flex items-center p-2 hover:bg-accent rounded cursor-pointer"
-              onClick={() => onFileSelect && onFileSelect(file)}
+              onClick={() => {}}
             >
               {getFileIcon(file.name)}
               <span className="truncate">{file.name}</span>
